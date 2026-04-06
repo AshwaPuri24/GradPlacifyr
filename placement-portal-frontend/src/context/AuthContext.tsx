@@ -54,6 +54,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(u)
       localStorage.setItem('placement_user', JSON.stringify(u))
       localStorage.setItem('placement_token', res.token)
+      // Signal login success for the toast system (decoupled via CustomEvent)
+      window.dispatchEvent(new CustomEvent('placement:login', { detail: { role: u.role } }))
       navigate(routes[u.role], { replace: true })
     },
     [navigate]

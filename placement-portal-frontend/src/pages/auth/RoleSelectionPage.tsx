@@ -1,27 +1,47 @@
 import { Link } from 'react-router-dom'
+import { GraduationCap, Briefcase, Shield } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import './Auth.css'
 
-const roles = [
+interface RoleOption {
+  key: string
+  label: string
+  subtitle: string
+  accent: string
+  icon: LucideIcon
+  /** Hex color for the icon circle background */
+  iconBg: string
+  /** Hex color for the top border */
+  borderColor: string
+}
+
+const roles: RoleOption[] = [
   {
     key: 'student',
     label: 'Student',
     subtitle: 'Placements, internships and career services',
     accent: 'student',
-    iconText: 'ST',
+    icon: GraduationCap,
+    iconBg: '#2563eb',
+    borderColor: '#2563eb',
   },
   {
     key: 'recruiter',
     label: 'Company / Recruiter',
     subtitle: 'Job postings and campus hiring',
     accent: 'recruiter',
-    iconText: 'CR',
+    icon: Briefcase,
+    iconBg: '#059669',
+    borderColor: '#059669',
   },
   {
     key: 'admin',
     label: 'TPO / Admin',
     subtitle: 'System and user management',
     accent: 'admin',
-    iconText: 'TA',
+    icon: Shield,
+    iconBg: '#7c3aed',
+    borderColor: '#7c3aed',
   },
 ]
 
@@ -37,19 +57,26 @@ const RoleSelectionPage = () => {
         <p className="role-selection-subtitle">Select your portal to continue</p>
 
         <div className="role-grid">
-          {roles.map((role) => (
-            <Link
-              key={role.key}
-              to={`/login?role=${role.key}`}
-              className={`role-card ${role.accent}`}
-            >
-              <span className="role-icon" aria-hidden="true">
-                {role.iconText}
-              </span>
-              <span className="role-label">{role.label}</span>
-              <span className="role-text">{role.subtitle}</span>
-            </Link>
-          ))}
+          {roles.map((role) => {
+            const Icon = role.icon
+            return (
+              <Link
+                key={role.key}
+                to={`/login?role=${role.key}`}
+                className={`role-card ${role.accent}`}
+              >
+                <span
+                  className="role-icon"
+                  aria-hidden="true"
+                  style={{ background: role.iconBg }}
+                >
+                  <Icon size={24} strokeWidth={2} color="#ffffff" />
+                </span>
+                <span className="role-label">{role.label}</span>
+                <span className="role-text">{role.subtitle}</span>
+              </Link>
+            )
+          })}
         </div>
       </section>
     </div>

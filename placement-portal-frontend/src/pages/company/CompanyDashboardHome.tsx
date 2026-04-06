@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { getJobs, type Job } from '../../api/jobs'
 import { getApplications, type PortalApplication } from '../../api/applications'
+import { getRoleTheme } from '../../utils/roleConfig'
 import {
   ActivityTimeline,
   ChartCard,
@@ -120,12 +121,16 @@ const CompanyDashboardHome = () => {
     [applications.length, shortlistedCount, interviewsCount]
   )
 
+  const roleTheme = getRoleTheme('recruiter')
+
   return (
     <DashboardLayout
-      greeting={`Hi, ${user?.name ?? 'Recruiter'}`}
-      title="Company Dashboard"
+      greeting={`Welcome, ${user?.name ?? 'Recruiter'}`}
+      title="Recruiter Dashboard"
       subtitle="Monitor job performance, track applicants, and accelerate hiring outcomes with live analytics."
       compactLayout
+      heroGradient={roleTheme.heroGradient}
+      roleIcon={roleTheme.icon}
       error={error}
       kpis={
         <>

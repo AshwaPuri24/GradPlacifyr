@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
+import type { LucideIcon } from 'lucide-react'
 import './DashboardLayout.css'
 
 interface DashboardLayoutProps {
@@ -16,6 +17,10 @@ interface DashboardLayoutProps {
   /** When true, analytics/quick-actions/activity/insights stack beside calendar
    *  instead of below it. Best for student dashboards with compact analytics. */
   compactLayout?: boolean
+  /** CSS gradient string to override the hero banner colour per role */
+  heroGradient?: string
+  /** lucide-react icon component to show beside the title in the hero */
+  roleIcon?: LucideIcon
 }
 
 interface SectionCardProps {
@@ -63,6 +68,8 @@ const DashboardLayout = ({
   insights,
   error,
   compactLayout = false,
+  heroGradient,
+  roleIcon: RoleIcon,
 }: DashboardLayoutProps) => {
   // ── Compact mode: Calendar left, everything else stacked right ──
   if (calendar && compactLayout) {
@@ -73,8 +80,12 @@ const DashboardLayout = ({
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35 }}
+          style={heroGradient ? { background: heroGradient } : undefined}
         >
-          <h1>{greeting || title}</h1>
+          <div className="dashboard-hero-content">
+            {RoleIcon && <RoleIcon size={26} strokeWidth={2} className="dashboard-hero-icon" />}
+            <h1>{greeting || title}</h1>
+          </div>
         </motion.header>
 
         <AnimatePresence>
@@ -128,8 +139,12 @@ const DashboardLayout = ({
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
+        style={heroGradient ? { background: heroGradient } : undefined}
       >
-        <h1>{greeting || title}</h1>
+        <div className="dashboard-hero-content">
+          {RoleIcon && <RoleIcon size={26} strokeWidth={2} className="dashboard-hero-icon" />}
+          <h1>{greeting || title}</h1>
+        </div>
       </motion.header>
 
       <AnimatePresence>

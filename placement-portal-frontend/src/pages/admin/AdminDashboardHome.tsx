@@ -17,6 +17,7 @@ import {
 import { getJobs, type Job } from '../../api/jobs'
 import { getApplications, type PortalApplication } from '../../api/applications'
 import { getUsers, type PortalUser } from '../../api/users'
+import { getRoleTheme } from '../../utils/roleConfig'
 import {
   ActivityTimeline,
   ChartCard,
@@ -177,12 +178,16 @@ const AdminDashboardHome = () => {
 
   // ── Render ─────────────────────────────────────────────────────────────
 
+  const roleTheme = getRoleTheme(user?.role ?? 'admin')
+
   return (
     <DashboardLayout
-      greeting={`Hi, ${user?.name ?? 'Admin'}`}
+      greeting={`Welcome, ${user?.name ?? 'Admin'}`}
       title="Admin Dashboard"
       subtitle="Unified view of platform performance, drive operations, user growth, and placement outcomes."
       compactLayout
+      heroGradient={roleTheme.heroGradient}
+      roleIcon={roleTheme.icon}
       error={error}
       kpis={
         <>

@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { Menu, X } from 'lucide-react'
 import jimsLogo from '../../assets/jims-logo.png'
 
 const navItems = [
@@ -10,31 +12,60 @@ const navItems = [
 ]
 
 const LandingHeader = () => {
+  const [mobileOpen, setMobileOpen] = useState(false)
+
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/90 backdrop-blur">
-      <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-3 md:px-8">
-        <Link to="/" className="shrink-0">
-          <img src={jimsLogo} alt="JIMS Rohini Sector-5" className="h-12 w-auto md:h-14" />
+    <header className="sticky top-0 z-40 w-full border-b border-slate-200/70 bg-white/95 backdrop-blur-md">
+      <div className="flex w-full items-center justify-between px-6 py-3 lg:px-10 xl:px-16">
+        {/* ── Logo — far left ── */}
+        <Link to="/" className="flex shrink-0 items-center">
+          <img
+            src={jimsLogo}
+            alt="JIMS Rohini Sector-5"
+            className="h-12 w-auto object-contain md:h-14"
+          />
         </Link>
 
-        <nav className="hidden items-center gap-2 lg:flex">
+        {/* ── Desktop navigation — far right ── */}
+        <nav className="ml-auto hidden items-center gap-8 lg:flex">
           {navItems.map((item) => (
             <Link
               key={item.to}
               to={item.to}
-              className="rounded-full px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-blue-50 hover:text-jimsBlue"
+              className="text-sm font-medium text-slate-700 transition-colors duration-200 hover:text-blue-600"
             >
               {item.label}
             </Link>
           ))}
         </nav>
 
-        <div className="flex items-center gap-2 lg:hidden">
-          <Link to="/role-selection" className="rounded-full border border-blue-200 px-3 py-1.5 text-sm font-medium text-jimsBlue">
-            Roles
-          </Link>
-        </div>
+        {/* ── Mobile hamburger — far right ── */}
+        <button
+          onClick={() => setMobileOpen(!mobileOpen)}
+          className="ml-auto flex items-center justify-center rounded-lg p-2 text-slate-700 transition hover:bg-slate-100 lg:hidden"
+          aria-label="Toggle menu"
+        >
+          {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+        </button>
       </div>
+
+      {/* ── Mobile menu dropdown ── */}
+      {mobileOpen && (
+        <div className="border-t border-slate-100 bg-white px-6 pb-4 pt-2 lg:hidden">
+          <nav className="flex flex-col gap-1">
+            {navItems.map((item) => (
+              <Link
+                key={item.to}
+                to={item.to}
+                onClick={() => setMobileOpen(false)}
+                className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-blue-50 hover:text-blue-600"
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+        </div>
+      )}
     </header>
   )
 }

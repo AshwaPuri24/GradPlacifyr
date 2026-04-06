@@ -15,6 +15,7 @@ import {
 import { getJobs } from '../../api/jobs'
 import { getMyApplications, type StudentApplication } from '../../api/applications'
 import { getMyProfile, type StudentProfile } from '../../api/profile'
+import { getRoleTheme } from '../../utils/roleConfig'
 import {
   ActivityTimeline,
   DashboardLayout,
@@ -140,12 +141,16 @@ const StudentDashboardHome = () => {
     [openJobsCount, profileCompletion, interviewCount]
   )
 
+  const roleTheme = getRoleTheme('student')
+
   return (
     <DashboardLayout
-      greeting={`Hi, ${user?.name ?? 'Student'}`}
+      greeting={`Welcome, ${user?.name ?? 'Student'}`}
       title="Student Dashboard"
       subtitle="Track opportunities, monitor your funnel, and improve placement readiness with guided insights."
       compactLayout
+      heroGradient={roleTheme.heroGradient}
+      roleIcon={roleTheme.icon}
       error={error}
       kpis={
         <>

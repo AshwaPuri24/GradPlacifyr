@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet } from 'react-router-dom'
 import { useAuth, type Role } from '../../context/AuthContext'
 import { getMyProfile, type StudentProfile } from '../../api/profile'
 import { resolveFileUrl } from '../../config'
+import { getRoleTheme } from '../../utils/roleConfig'
 import jimsLogo from '../../assets/jims-logo.png'
 import './PortalLayout.css'
 
@@ -175,7 +176,10 @@ const PortalLayout = () => {
       />
 
       {/* ── Right-side drawer ── */}
-      <aside className={`portal-sidebar ${sidebarOpen ? 'open' : ''}`}>
+      <aside
+        className={`portal-sidebar ${sidebarOpen ? 'open' : ''}`}
+        style={user ? { borderTop: `3px solid ${getRoleTheme(user.role).sidebarAccent}` } : undefined}
+      >
         <div className="portal-drawer-header">
           <button
             type="button"
@@ -186,6 +190,26 @@ const PortalLayout = () => {
             ✕
           </button>
         </div>
+
+        {/* ── Sidebar user card ── */}
+        {user && (
+          <div className="portal-sidebar-user">
+            <div className="portal-sidebar-avatar">
+              {user.profileImage ? (
+                <img
+                  src={resolveFileUrl(user.profileImage) || ''}
+                  alt={user.name}
+                  className="portal-sidebar-avatar-img"
+                />
+              ) : (
+                <span className="portal-sidebar-avatar-initials">{initials}</span>
+              )}
+            </div>
+            <div className="portal-sidebar-user-info">
+              <span className="portal-sidebar-user-name">{user.name}</span>
+            </div>
+          </div>
+        )}
 
         <nav className="portal-nav">
           {navItems.map((item) => (

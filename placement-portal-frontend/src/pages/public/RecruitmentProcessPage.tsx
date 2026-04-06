@@ -4,9 +4,9 @@ import LandingFooter from '../../components/landing/LandingFooter'
 
 const RecruitmentProcessPage = () => {
   return (
-    <div className="min-h-screen bg-[#edf2ff] text-slate-900">
+    <div className="min-h-screen bg-white text-slate-900">
       <LandingHeader />
-      <main className="py-8 md:py-12">
+      <main>
         <ProcessSection />
       </main>
       <LandingFooter />

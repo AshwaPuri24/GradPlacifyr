@@ -1,5 +1,9 @@
+import { useEffect } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
+import { ToastProvider, useToast } from './components/ui/Toast'
+import { getRoleTheme } from './utils/roleConfig'
+import type { Role } from './context/AuthContext'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/auth/LoginPage'
 import RegisterPage from './pages/auth/RegisterPage'
@@ -10,6 +14,8 @@ import ProtectedRoute from './components/routing/ProtectedRoute'
 import PortalLayout from './components/layout/PortalLayout'
 import PublicInfoPage from './pages/public/PublicInfoPage'
 import RecruitmentProcessPage from './pages/public/RecruitmentProcessPage'
+import PlacementStatisticsPage from './pages/public/PlacementStatisticsPage'
+import AboutPage from './pages/public/AboutPage'
 import StudentDashboardHome from './pages/student/StudentDashboardHome'
 import StudentProfile from './pages/student/StudentProfile'
 import StudentChangePassword from './pages/student/StudentChangePassword'
@@ -38,35 +44,36 @@ import AdminProfile from './pages/admin/AdminProfile'
 import AdminChangePassword from './pages/admin/AdminChangePassword'
 import './App.css'
 
+/** Listens for the login CustomEvent and shows a role-themed toast */
+function LoginToastListener() {
+  const { showToast } = useToast()
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const role = (e as CustomEvent).detail?.role as Role | undefined
+      if (role) {
+        const theme = getRoleTheme(role)
+        showToast(`Welcome! Signed in as ${theme.label}`, role)
+      }
+    }
+    window.addEventListener('placement:login', handler)
+    return () => window.removeEventListener('placement:login', handler)
+  }, [showToast])
+
+  return null
+}
+
 function App() {
   return (
     <BrowserRouter>
+      <ToastProvider>
       <AuthProvider>
+      <LoginToastListener />
         <Routes>
           <Route path="/" element={<LandingPage />} />
-          <Route path="/about" element={
-            <PublicInfoPage
-              title="About Placement Cell"
-              intro="JIMS Rohini Sector-5 Placement Cell supports students with training, internships, and recruitment drives."
-              highlights={[
-                'Dedicated TPO coordination',
-                'Industry partnerships and on-campus drives',
-                'Resume, aptitude, and interview mentoring',
-              ]}
-            />
-          } />
+          <Route path="/about" element={<AboutPage />} />
           <Route path="/recruitment-process" element={<RecruitmentProcessPage />} />
-          <Route path="/placement-statistics" element={
-            <PublicInfoPage
-              title="Placement Statistics"
-              intro="Department-wise and year-wise placement outcomes at JIMS Rohini Sector-5."
-              highlights={[
-                'Placement percentage trends',
-                'Highest and average package reports',
-                'Company participation counts',
-              ]}
-            />
-          } />
+          <Route path="/placement-statistics" element={<PlacementStatisticsPage />} />
           <Route path="/contact" element={
             <PublicInfoPage
               title="Contact Placement Office"
@@ -130,6 +137,7 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
+      </ToastProvider>
     </BrowserRouter>
   )
 }
