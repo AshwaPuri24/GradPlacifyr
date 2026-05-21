@@ -1,36 +1,36 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import {
+  ArrowRight,
   Briefcase,
+  CalendarClock,
   ChevronRight,
   ClipboardList,
-  UserCheck,
-  UserCircle,
-  Target,
-  Search,
   FilePenLine,
-  Upload,
-  CalendarClock,
+  Search,
+  Send,
   Sparkles,
+  Target,
+  TrendingUp,
+  Trophy,
+  Upload,
+  UserCheck,
+  Users,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { getJobs, type Job } from '../../api/jobs'
 import { getMyApplications, type StudentApplication } from '../../api/applications'
 import { getMyProfile, type StudentProfile } from '../../api/profile'
-import { getRoleTheme } from '../../utils/roleConfig'
 import { API_BASE } from '../../config'
 import {
-  ActivityTimeline,
-  DashboardLayout,
   EventCalendar,
   JobOpportunityCard,
-  MetricCard,
-  QuickActionCard,
-  SuggestionPanel,
+  WorkflowCard,
   type JobCardData,
-  type SuggestionItem,
-  type TimelineItem,
 } from '../../components/dashboard'
+import './StudentDashboardHome.css'
+
+// ── Profile score helpers (unchanged) ───────────────────────────────────────
 
 function scoreProfile(profile: StudentProfile) {
   const checks = [
@@ -46,8 +46,7 @@ function scoreProfile(profile: StudentProfile) {
     Boolean(profile.achievements.trim()),
     Boolean(profile.githubUrl.trim() || profile.linkedinUrl.trim() || profile.portfolioUrl.trim()),
   ]
-  const completed = checks.filter(Boolean).length
-  return Math.round((completed / checks.length) * 100)
+  return Math.round((checks.filter(Boolean).length / checks.length) * 100)
 }
 
 function readinessLabel(score: number) {
@@ -56,6 +55,50 @@ function readinessLabel(score: number) {
   if (score < 85) return 'Strong'
   return 'Placement Ready'
 }
+
+// ── Profile Score Gauge ──────────────────────────────────────────────────────
+
+const ProfileScoreGauge = ({ score }: { score: number }) => {
+  const SIZE = 124
+  const STROKE = 10
+  const radius = (SIZE - STROKE) / 2
+  const circumference = 2 * Math.PI * radius
+  const offset = circumference - (score / 100) * circumference
+  const label = score >= 85 ? 'Excellent' : score >= 65 ? 'Good' : score >= 40 ? 'Average' : 'Needs Work'
+
+  return (
+    <div className="sdb-gauge">
+      <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
+        <defs>
+          <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#4ade80" />
+            <stop offset="100%" stopColor="#22d3ee" />
+          </linearGradient>
+        </defs>
+        <circle
+          cx={SIZE / 2} cy={SIZE / 2} r={radius}
+          fill="none" stroke="rgba(255,255,255,0.14)" strokeWidth={STROKE}
+        />
+        <circle
+          cx={SIZE / 2} cy={SIZE / 2} r={radius}
+          fill="none" stroke="url(#gaugeGrad)" strokeWidth={STROKE}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          transform={`rotate(-90 ${SIZE / 2} ${SIZE / 2})`}
+          style={{ transition: 'stroke-dashoffset 0.7s cubic-bezier(0.22,1,0.36,1)' }}
+        />
+      </svg>
+      <div className="sdb-gauge-inner">
+        <strong>{score}%</strong>
+        <span>Profile Score</span>
+        <em>{label}</em>
+      </div>
+    </div>
+  )
+}
+
+// ── Main Component ───────────────────────────────────────────────────────────
 
 const StudentDashboardHome = () => {
   const { user } = useAuth()
@@ -69,13 +112,9 @@ const StudentDashboardHome = () => {
     let cancelled = false
     setError(null)
 
-    // Use allSettled so a transient failure on ONE endpoint doesn't blank
-    // the whole dashboard. We only surface a top-level error if every
-    // request failed (true "API is down" scenario).
     Promise.allSettled([getJobs(), getMyApplications(), getMyProfile()])
       .then(([jobsRes, appsRes, profileRes]) => {
         if (cancelled) return
-
         if (jobsRes.status === 'fulfilled') setJobs(jobsRes.value)
         if (appsRes.status === 'fulfilled') setApplications(appsRes.value)
         if (profileRes.status === 'fulfilled') setProfile(profileRes.value)
@@ -83,7 +122,6 @@ const StudentDashboardHome = () => {
         const failures = [jobsRes, appsRes, profileRes].filter(
           (r): r is PromiseRejectedResult => r.status === 'rejected'
         )
-
         if (failures.length === 3) {
           const raw = failures[0].reason instanceof Error
             ? failures[0].reason.message
@@ -94,21 +132,17 @@ const StudentDashboardHome = () => {
               : raw
           )
         } else if (failures.length > 0) {
-          // Partial failure — log silently; the visible sections will just show empty state.
           console.warn('[dashboard] Partial load failure:', failures.map((f) => f.reason))
         }
       })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
+      .finally(() => { if (!cancelled) setLoading(false) })
 
-    return () => {
-      cancelled = true
-    }
+    return () => { cancelled = true }
   }, [])
 
+  // ── Derived stats (all unchanged) ────────────────────────────────────────
+
   const openJobs = useMemo(() => jobs.filter((j) => j.status === 'open'), [jobs])
-  const openJobsCount = openJobs.length
 
   const appliedJobIds = useMemo(
     () => new Set(applications.map((a) => a.jobId)),
@@ -116,22 +150,21 @@ const StudentDashboardHome = () => {
   )
 
   const shortlistedCount = useMemo(
-    () =>
-      applications.filter((item) =>
-        ['shortlisted', 'test_scheduled', 'interview_scheduled', 'selected'].includes(item.status)
-      ).length,
+    () => applications.filter((a) =>
+      ['shortlisted', 'test_scheduled', 'interview_scheduled', 'selected'].includes(a.status)
+    ).length,
     [applications]
   )
 
   const interviewCount = useMemo(
-    () =>
-      applications.filter((item) =>
-        ['test_scheduled', 'interview_scheduled'].includes(item.status)
-      ).length,
+    () => applications.filter((a) =>
+      ['test_scheduled', 'interview_scheduled'].includes(a.status)
+    ).length,
     [applications]
   )
 
   const profileCompletion = useMemo(() => (profile ? scoreProfile(profile) : 0), [profile])
+
   const readinessScore = useMemo(() => {
     const appFactor = applications.length ? Math.min(20, applications.length * 2) : 0
     const shortListFactor = applications.length
@@ -140,57 +173,25 @@ const StudentDashboardHome = () => {
     return Math.min(100, profileCompletion + appFactor + shortListFactor)
   }, [applications.length, shortlistedCount, profileCompletion])
 
-  const profileSuggestions = useMemo(() => {
-    if (!profile) return ['Add more skills', 'Upload resume', 'Add certifications']
-    const items: string[] = []
-    if (!profile.programmingLanguages.trim()) items.push('Add more skills')
-    if (!profile.certifications.trim()) items.push('Add certifications to boost recruiter visibility')
-    if (!profile.projects.length) items.push('Add projects to strengthen profile')
-    if (!profile.linkedinUrl.trim()) items.push('Add your LinkedIn URL to complete your social presence')
-    return items.length ? items : ['Maintain regular updates before drives']
-  }, [profile])
-
-  const activityItems = useMemo<TimelineItem[]>(
-    () =>
-      applications.slice(0, 5).map((item) => ({
-        id: item.id,
-        title: `Applied to ${item.jobTitle}`,
-        description: `${item.company} | Status: ${item.status}`,
-        time: new Date(item.appliedAt).toLocaleDateString(),
-        tone:
-          item.status === 'selected'
-            ? 'success'
-            : item.status.includes('interview')
-              ? 'warning'
-              : 'default',
-      })),
+  const offerCount = useMemo(
+    () => applications.filter((a) => a.status === 'selected').length,
     [applications]
   )
 
-  const insightSuggestions = useMemo<SuggestionItem[]>(
-    () => [
-      {
-        id: 'new-jobs',
-        title: 'Apply to new jobs this week',
-        detail: `${openJobsCount} opportunities are open. Early applicants get 2x shortlist rate.`,
-      },
-      {
-        id: 'profile',
-        title: 'Improve profile quality',
-        detail: `At ${profileCompletion}% — complete missing sections for better recruiter matches.`,
-      },
-      {
-        id: 'interview',
-        title: 'Prepare for interviews',
-        detail: `${interviewCount} interview round${interviewCount !== 1 ? 's' : ''} in your pipeline. Practice role-specific questions daily.`,
-      },
-    ],
-    [openJobsCount, profileCompletion, interviewCount]
+  const nextInterview = useMemo(
+    () => applications.find((a) => a.status === 'interview_scheduled') ?? null,
+    [applications]
   )
 
-  // Build job card data (top 4 open jobs, with applied status)
+  const nearestDeadline = useMemo(() => {
+    const today = new Date()
+    const future = openJobs
+      .filter((j) => j.deadline && new Date(j.deadline) >= today)
+      .sort((a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime())
+    return future[0] ?? null
+  }, [openJobs])
+
   const jobCards = useMemo<JobCardData[]>(() => {
-    // Show up to 4 jobs: prioritize open, then show applied
     const cards: JobCardData[] = openJobs.slice(0, 4).map((job) => ({
       id: job.id,
       title: job.title,
@@ -202,38 +203,29 @@ const StudentDashboardHome = () => {
       status: appliedJobIds.has(job.id) ? 'applied' as const : 'open' as const,
     }))
 
-    // If fewer than 4 open jobs, pad with recently applied jobs
     if (cards.length < 4) {
       const openIds = new Set(cards.map((c) => c.id))
       const appliedJobs = jobs
         .filter((j) => appliedJobIds.has(j.id) && !openIds.has(j.id))
         .slice(0, 4 - cards.length)
-
       for (const job of appliedJobs) {
         cards.push({
-          id: job.id,
-          title: job.title,
-          company: job.company,
-          ctc: job.ctc,
-          location: job.location,
-          deadline: job.deadline,
-          employmentType: job.employmentType,
-          status: 'applied',
+          id: job.id, title: job.title, company: job.company,
+          ctc: job.ctc, location: job.location, deadline: job.deadline,
+          employmentType: job.employmentType, status: 'applied',
         })
       }
     }
-
     return cards
   }, [openJobs, jobs, appliedJobIds])
 
-  const roleTheme = getRoleTheme('student')
+  // ── SSO: launch AI MCQ practice ──────────────────────────────────────────
 
-  // ── SSO: launch AI MCQ practice in AIMCQTest ────────────────────────────
   const handleAiMockInterview = async () => {
     try {
       const res = await fetch(`${API_BASE}/sso/generate-ticket`, {
         method: 'POST',
-        credentials: 'include', // send the HttpOnly auth cookie
+        credentials: 'include',
       })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
@@ -247,162 +239,273 @@ const StudentDashboardHome = () => {
     }
   }
 
+  // ── Render ───────────────────────────────────────────────────────────────
+
   return (
-    <DashboardLayout
-      greeting={`Welcome back, ${user?.name ?? 'Student'}`}
-      title="Student Dashboard"
-      subtitle="Track opportunities, monitor your funnel & improve your placement readiness."
-      compactLayout
-      heroGradient={roleTheme.heroGradient}
-      roleIcon={roleTheme.icon}
-      error={error}
-      readinessLabel={`Placement Readiness: ${readinessLabel(readinessScore)}`}
-      readinessPercent={readinessScore}
-      heroStats={[
-        { label: 'Jobs Open', value: openJobsCount },
-        { label: 'Shortlisted', value: shortlistedCount },
-      ]}
-      primaryContentTitle="Job Opportunities"
-      primaryContentSubtitle="Top picks based on your profile"
-      primaryContentHeaderRight={
-        <Link to="/student/jobs" className="section-view-all">
-          View All Jobs <ChevronRight size={14} />
-        </Link>
-      }
-      kpis={
-        <>
-          <MetricCard
-            icon={Briefcase}
-            label="Available Opportunities"
-            value={openJobsCount}
-            trend={6}
-            loading={loading}
-          />
-          <MetricCard
-            icon={ClipboardList}
-            label="Applications Submitted"
-            value={applications.length}
-            trend={8}
-            loading={loading}
-          />
-          <MetricCard
-            icon={UserCheck}
-            label="Shortlisted"
-            value={shortlistedCount}
-            trend={4}
-            loading={loading}
-          />
-          <MetricCard
-            icon={UserCircle}
-            label="Profile Completion %"
-            value={`${profileCompletion}%`}
-            trend={3}
-            loading={loading}
-          />
-          <MetricCard
-            icon={Target}
-            label="Placement Readiness"
-            value={`${readinessScore}%`}
-            trend={5}
-            loading={loading}
-          />
-        </>
-      }
-      analyticsTitle="Profile Strength"
-      analyticsSubtitle="Improve your profile to boost placement readiness"
-      activityTitle="Recent Activity"
-      activitySubtitle="Your latest placement actions"
-      primaryContent={
-        jobCards.length > 0 ? (
-          <div className="job-opp-scroll">
-            {jobCards.map((job) => (
-              <JobOpportunityCard key={job.id} job={job} />
-            ))}
-          </div>
-        ) : loading ? (
-          <div style={{ display: 'flex', gap: '0.85rem' }}>
-            {[1, 2, 3, 4].map((i) => (
-              <div
-                key={i}
-                className="skeleton-block"
-                style={{ height: 200, flex: 1, borderRadius: '0.95rem' }}
-              />
-            ))}
-          </div>
-        ) : (
-          <p className="dashboard-empty">
-            No open opportunities at the moment. Check back soon!
+    <div className="sdb">
+      {/* Error */}
+      {error && <div className="sdb-error">{error}</div>}
+
+      {/* ══ HERO ══ */}
+      <section className="sdb-hero">
+        {/* ── Left: greeting + readiness ── */}
+        <div className="sdb-hero-left">
+          <h1 className="sdb-hero-greeting">Welcome back, {user?.name ?? 'Student'} 👋</h1>
+          <p className="sdb-hero-sub">
+            Track opportunities, monitor your funnel &amp; improve your placement readiness.
           </p>
-        )
-      }
-      calendar={<EventCalendar />}
-      analytics={
-        <article className="profile-strength profile-strength-full">
-          <div className="profile-strength-top">
-            <h3>Profile Strength</h3>
-            <span>{readinessLabel(readinessScore)}</span>
+          <div className="sdb-readiness-badge">
+            <span className="sdb-readiness-dot" />
+            Placement Readiness: {readinessLabel(readinessScore)}
           </div>
-          <div className="profile-bar">
-            <i style={{ width: `${readinessScore}%` }} />
+          <div className="sdb-hero-progress-row">
+            <div className="sdb-hero-progress-bar">
+              <div className="sdb-hero-progress-fill" style={{ width: `${readinessScore}%` }} />
+            </div>
+            <span className="sdb-hero-progress-label">{readinessScore}%</span>
           </div>
-          <div className="suggestion-panel" style={{ marginTop: '0.65rem' }}>
-            <ul className="suggestion-list">
-              {profileSuggestions.map((item) => (
-                <li key={item}>
-                  <Sparkles size={15} />
-                  <div>
-                    <h4>{item}</h4>
-                    <p>Keep improving profile quality for stronger recruiter matches.</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </article>
-      }
-      activity={
-        <ActivityTimeline
-          items={activityItems}
-          emptyText="No recent activity yet. Start by applying to open opportunities."
-        />
-      }
-      quickActions={
-        <div className="quick-action-grid">
-          <QuickActionCard
-            to="/student/jobs"
-            title="Browse Jobs"
-            description="Explore all open opportunities"
-            icon={Search}
-          />
-          <QuickActionCard
-            to="/student/profile"
-            title="Update Profile"
-            description="Keep academics and skills fresh"
-            icon={FilePenLine}
-          />
-          <QuickActionCard
-            to="/student/upload-resume"
-            title="Upload Resume"
-            description="Share latest CV with recruiters"
-            icon={Upload}
-          />
-          <QuickActionCard
-            to="/student/interview-schedule"
-            title="Interview Schedule"
-            description="Track tests and interview slots"
-            icon={CalendarClock}
-          />
-          <QuickActionCard
-            to="/student/dashboard?tool=ai"
-            title="AI Mock Interview"
-            description="Practice role-based questions"
-            icon={Sparkles}
-            onClick={handleAiMockInterview}
-          />
         </div>
-      }
-      insights={<SuggestionPanel title="AI Insights" items={insightSuggestions} />}
-    />
+
+        {/* ── Centre: 4 metric cards in one row ── */}
+        <div className="sdb-hero-metrics">
+          <div className="sdb-metric-card">
+            <div className="sdb-metric-icon sdb-metric-icon--blue"><ClipboardList size={16} /></div>
+            <strong className="sdb-metric-num">{loading ? '—' : applications.length}</strong>
+            <span className="sdb-metric-lbl">Applications</span>
+            <em className="sdb-metric-trend"><TrendingUp size={10} /> This month</em>
+          </div>
+          <div className="sdb-metric-card">
+            <div className="sdb-metric-icon sdb-metric-icon--green"><UserCheck size={16} /></div>
+            <strong className="sdb-metric-num">{loading ? '—' : shortlistedCount}</strong>
+            <span className="sdb-metric-lbl">Shortlisted</span>
+            <em className="sdb-metric-trend"><TrendingUp size={10} /> This month</em>
+          </div>
+          <div className="sdb-metric-card">
+            <div className="sdb-metric-icon sdb-metric-icon--amber"><CalendarClock size={16} /></div>
+            <strong className="sdb-metric-num">{loading ? '—' : interviewCount}</strong>
+            <span className="sdb-metric-lbl">Interviews</span>
+            <em className="sdb-metric-trend"><TrendingUp size={10} /> This month</em>
+          </div>
+          <div className="sdb-metric-card">
+            <div className="sdb-metric-icon sdb-metric-icon--purple"><Trophy size={16} /></div>
+            <strong className="sdb-metric-num">{loading ? '—' : offerCount}</strong>
+            <span className="sdb-metric-lbl">Offers</span>
+            <em className="sdb-metric-trend"><TrendingUp size={10} /> This month</em>
+          </div>
+        </div>
+
+        {/* ── Right: profile score gauge ── */}
+        <ProfileScoreGauge score={profileCompletion} />
+
+        {/* ── Bottom strip: next interview + upcoming deadline ── */}
+        <div className="sdb-hero-bottom">
+          <div className="sdb-hero-info-panel">
+            <div className="sdb-hip-icon sdb-hip-icon--blue"><CalendarClock size={15} /></div>
+            <div className="sdb-hip-body">
+              <span className="sdb-hip-label">Next Interview</span>
+              <strong className="sdb-hip-title">
+                {nextInterview
+                  ? `${nextInterview.jobTitle} · ${nextInterview.company}`
+                  : 'No upcoming interview'}
+              </strong>
+              {nextInterview && (
+                <span className="sdb-hip-date">Scheduled · Check your calendar</span>
+              )}
+            </div>
+            <Link to="/student/interview-schedule" className="sdb-hip-cta">View Schedule →</Link>
+          </div>
+
+          <div className="sdb-hero-info-panel">
+            <div className="sdb-hip-icon sdb-hip-icon--amber"><CalendarClock size={15} /></div>
+            <div className="sdb-hip-body">
+              <span className="sdb-hip-label">Upcoming Deadline</span>
+              <strong className="sdb-hip-title">
+                {nearestDeadline
+                  ? `${nearestDeadline.title} · ${nearestDeadline.company}`
+                  : 'No deadlines soon'}
+              </strong>
+              {nearestDeadline && (
+                <span className="sdb-hip-date">
+                  {new Date(nearestDeadline.deadline!).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </span>
+              )}
+            </div>
+            <Link to="/student/jobs" className="sdb-hip-cta">View Schedule →</Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ══ WORKFLOW CARDS ══ */}
+      <div className="workflow-cards-grid">
+        <WorkflowCard
+          to="/student/jobs"
+          title="Browse Jobs"
+          subtitle="Explore all open opportunities"
+          icon={Search}
+          color="blue"
+        />
+        <WorkflowCard
+          to="/student/profile"
+          title="Update Profile"
+          subtitle="Keep academics and skills fresh"
+          icon={FilePenLine}
+          color="indigo"
+        />
+        <WorkflowCard
+          to="/student/upload-resume"
+          title="Upload Resume"
+          subtitle="Share latest CV with recruiters"
+          icon={Upload}
+          color="teal"
+        />
+        <WorkflowCard
+          to="/student/interview-schedule"
+          title="Interview Schedule"
+          subtitle="Track tests and interview slots"
+          icon={CalendarClock}
+          color="amber"
+        />
+        <WorkflowCard
+          to="/student/dashboard?tool=ai"
+          title="AI Mock Interview"
+          subtitle="Practice role-based questions"
+          icon={Sparkles}
+          color="purple"
+          onClick={handleAiMockInterview}
+        />
+        <WorkflowCard
+          to="/student/profile"
+          title="Placement Readiness"
+          subtitle="Track your placement readiness"
+          icon={Target}
+          color="cyan"
+        />
+      </div>
+
+      {/* ══ MAIN CONTENT GRID ══ */}
+      <div className="sdb-main-grid">
+        {/* Left: Recommended Opportunities */}
+        <div className="sdb-card sdb-jobs-section">
+          <div className="sdb-section-head">
+            <div className="sdb-section-title">
+              <div className="sdb-section-icon"><Briefcase size={16} /></div>
+              <div>
+                <h2>Recommended Opportunities</h2>
+                <p>Top picks based on your profile</p>
+              </div>
+            </div>
+            <Link to="/student/jobs" className="sdb-view-all">
+              View All <ChevronRight size={14} />
+            </Link>
+          </div>
+          <div className="sdb-jobs-scroll">
+            {jobCards.length > 0 ? (
+              jobCards.map((job) => <JobOpportunityCard key={job.id} job={job} />)
+            ) : loading ? (
+              [1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="skeleton-block"
+                  style={{ height: 110, borderRadius: '0.85rem' }}
+                />
+              ))
+            ) : (
+              <p className="sdb-empty">No open opportunities at the moment. Check back soon!</p>
+            )}
+          </div>
+        </div>
+
+        {/* Right: Calendar & Events */}
+        <div className="sdb-calendar-section">
+          <EventCalendar />
+        </div>
+      </div>
+
+      {/* ══ PLACEMENT PIPELINE + AI CAREER ASSISTANT ══ */}
+      <div className="sdb-bottom-grid">
+        {/* Left: Placement Pipeline */}
+        <div className="sdb-card sdb-pipeline">
+          <h2 className="sdb-pipeline-title">Placement Pipeline</h2>
+          <p className="sdb-pipeline-subtitle">Track your progress in the placement journey</p>
+          {(() => {
+            const active = offerCount > 0 ? 'offer'
+              : interviewCount > 0 ? 'interview'
+              : shortlistedCount > 0 ? 'shortlisted'
+              : applications.length > 0 ? 'applied'
+              : null
+            return (
+              <div className="sdb-pipeline-flow">
+                <div className={`sdb-pf-stage sdb-pf-stage--blue${active === 'applied' ? ' sdb-pf-stage--active' : ''}`}>
+                  <div className="sdb-pf-node"><Send size={22} /></div>
+                  <span className="sdb-pf-label">Applied</span>
+                  <strong className="sdb-pf-count">{loading ? '—' : applications.length}</strong>
+                  <span className="sdb-pf-status">Total Applied</span>
+                </div>
+                <div className="sdb-pf-connector" />
+                <div className={`sdb-pf-stage sdb-pf-stage--pink${active === 'shortlisted' ? ' sdb-pf-stage--active' : ''}`}>
+                  <div className="sdb-pf-node"><Users size={22} /></div>
+                  <span className="sdb-pf-label">Shortlisted</span>
+                  <strong className="sdb-pf-count">{loading ? '—' : shortlistedCount}</strong>
+                  <span className="sdb-pf-status">In Review</span>
+                </div>
+                <div className="sdb-pf-connector" />
+                <div className={`sdb-pf-stage sdb-pf-stage--purple${active === 'interview' ? ' sdb-pf-stage--active' : ''}`}>
+                  <div className="sdb-pf-node"><CalendarClock size={22} /></div>
+                  <span className="sdb-pf-label">Interview</span>
+                  <strong className="sdb-pf-count">{loading ? '—' : interviewCount}</strong>
+                  <span className="sdb-pf-status">Upcoming</span>
+                </div>
+                <div className="sdb-pf-connector" />
+                <div className={`sdb-pf-stage sdb-pf-stage--green${active === 'offer' ? ' sdb-pf-stage--active' : ''}`}>
+                  <div className="sdb-pf-node"><Trophy size={22} /></div>
+                  <span className="sdb-pf-label">Offer</span>
+                  <strong className="sdb-pf-count">{loading ? '—' : offerCount}</strong>
+                  <span className="sdb-pf-status">Offers Received</span>
+                </div>
+              </div>
+            )
+          })()}
+        </div>
+
+        {/* Right: AI Career Assistant */}
+        <div className="sdb-card sdb-ai-panel">
+          <div className="sdb-section-head">
+            <div className="sdb-section-title">
+              <div className="sdb-section-icon sdb-section-icon--ai"><Sparkles size={16} /></div>
+              <div>
+                <h2>AI Career Assistant <span className="sdb-new-badge">New</span></h2>
+                <p>Get personalized insights to boost your placement chances</p>
+              </div>
+            </div>
+          </div>
+          <div className="sdb-ai-cards">
+            <div className="sdb-ai-card sdb-ai-card--accent-blue">
+              <div className="sdb-ai-card-content">
+                <strong>Improve your DSA skills</strong>
+                <p>Top maintainers suggest DSA proficiency for your target roles</p>
+              </div>
+              <ChevronRight size={16} className="sdb-ai-card-arrow" />
+            </div>
+            <div className="sdb-ai-card sdb-ai-card--accent">
+              <div className="sdb-ai-card-content">
+                <strong>Resume Score: {profileCompletion}/100</strong>
+                <p>
+                  {profileCompletion < 65
+                    ? 'Your resume score is low — improvements suggested'
+                    : 'Your resume looks good! Keep updating your profile'}
+                </p>
+              </div>
+              <ChevronRight size={16} className="sdb-ai-card-arrow" />
+            </div>
+          </div>
+          <button className="sdb-ai-explore" onClick={handleAiMockInterview}>
+            Explore AI Insights <ArrowRight size={14} />
+          </button>
+        </div>
+      </div>
+
+
+    </div>
   )
 }
 

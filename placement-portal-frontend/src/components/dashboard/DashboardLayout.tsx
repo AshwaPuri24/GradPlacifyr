@@ -15,10 +15,10 @@ interface DashboardLayoutProps {
   subtitle: string
   greeting?: string
   kpis: ReactNode
-  analytics: ReactNode
+  analytics?: ReactNode
   calendar?: ReactNode
   activity: ReactNode
-  quickActions: ReactNode
+  quickActions?: ReactNode
   insights: ReactNode
   error?: string | null
   /** When true, uses the premium command-center layout (70/30 grid) */
@@ -41,6 +41,8 @@ interface DashboardLayoutProps {
   readinessPercent?: number
   /** Right-side glassmorphism stat cards in the hero */
   heroStats?: HeroMiniStat[]
+  /** When true, renders primaryContent directly without the wrapping SectionCard */
+  skipPrimaryCard?: boolean
   /** @deprecated Use primaryContent + primaryContentTitle instead */
   jobOpportunities?: ReactNode
   /** @deprecated Use primaryContentHeaderRight instead */
@@ -121,6 +123,7 @@ const DashboardLayout = ({
   readinessLabel,
   readinessPercent,
   heroStats,
+  skipPrimaryCard = false,
   // deprecated compat
   jobOpportunities,
   viewAllJobsLink,
@@ -216,28 +219,34 @@ const DashboardLayout = ({
 
         {/* ═══ PRIMARY CONTENT (Job Opportunities / Charts / Tables) ═══ */}
         {resolvedPrimary && (
-          <SectionCard
-            title={resolvedPrimaryTitle}
-            subtitle={resolvedPrimarySubtitle}
-            collapsible={false}
-            className="dashboard-section-primary"
-            headerRight={resolvedPrimaryHeaderRight}
-          >
-            {resolvedPrimary}
-          </SectionCard>
+          skipPrimaryCard ? (
+            resolvedPrimary
+          ) : (
+            <SectionCard
+              title={resolvedPrimaryTitle}
+              subtitle={resolvedPrimarySubtitle}
+              collapsible={false}
+              className="dashboard-section-primary"
+              headerRight={resolvedPrimaryHeaderRight}
+            >
+              {resolvedPrimary}
+            </SectionCard>
+          )
         )}
 
         {/* ═══ MAIN 70/30 GRID ═══ */}
         <div className="dashboard-grid dashboard-grid-premium">
           {/* LEFT COLUMN (70%) */}
           <div className="dashboard-col-main">
-            <SectionCard
-              title="Quick Actions"
-              subtitle="Common tasks to keep workflows moving"
-              collapsible={false}
-            >
-              {quickActions}
-            </SectionCard>
+            {quickActions && (
+              <SectionCard
+                title="Quick Actions"
+                subtitle="Common tasks to keep workflows moving"
+                collapsible={false}
+              >
+                {quickActions}
+              </SectionCard>
+            )}
             <SectionCard
               title={activityTitle}
               subtitle={activitySubtitle}
@@ -245,13 +254,15 @@ const DashboardLayout = ({
             >
               {activity}
             </SectionCard>
-            <SectionCard
-              title={analyticsTitle}
-              subtitle={analyticsSubtitle}
-              collapsible={false}
-            >
-              {analytics}
-            </SectionCard>
+            {analytics && (
+              <SectionCard
+                title={analyticsTitle}
+                subtitle={analyticsSubtitle}
+                collapsible={false}
+              >
+                {analytics}
+              </SectionCard>
+            )}
           </div>
 
           {/* RIGHT COLUMN (30%) */}

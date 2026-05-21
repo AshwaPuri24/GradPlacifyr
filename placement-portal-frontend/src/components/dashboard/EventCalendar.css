@@ -349,6 +349,27 @@
   overflow-y: auto;
   flex: 1;
   min-height: 0;
+  scrollbar-width: thin;
+  scrollbar-color: #3b82f6 rgba(255, 255, 255, 0.06);
+}
+
+.ecal-sidebar-body::-webkit-scrollbar {
+  width: 4px;
+}
+
+.ecal-sidebar-body::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 4px;
+}
+
+.ecal-sidebar-body::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #06b6d4, #3b82f6);
+  border-radius: 4px;
+  box-shadow: 0 0 6px rgba(6, 182, 212, 0.3);
+}
+
+.ecal-sidebar-body::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #22d3ee, #60a5fa);
 }
 
 /* ── Empty state ── */

@@ -10,3 +10,11 @@ CLAUDE.md
 GEMINI.md
 SETUP_GUIDE.md
 security-report.docx
+/graphify-out
+.graphify_ast.json
+.graphify_detect.json
+.graphify_python
+.graphify_step_b0.py
+.graphify_step3a.py
+.graphify_uncached.txt
+/Prompts

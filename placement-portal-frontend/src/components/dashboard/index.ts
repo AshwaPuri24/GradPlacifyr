@@ -1,5 +1,7 @@
 export { default as DashboardLayout } from './DashboardLayout'
 export { default as MetricCard } from './MetricCard'
+export { default as WorkflowCard } from './WorkflowCard'
+export type { WorkflowCardColor } from './WorkflowCard'
 export { default as ChartCard } from './ChartCard'
 export { default as ActivityTimeline } from './ActivityTimeline'
 export { default as SuggestionPanel } from './SuggestionPanel'

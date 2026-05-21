@@ -152,20 +152,37 @@
   background: rgba(255, 255, 255, 0.9);
 }
 
-/* ── Burger menu button (always visible) ── */
+/* ── Burger menu button ── */
 .portal-menu-btn {
-  border: 0;
-  background: var(--jims-maroon);
-  color: #fff;
-  border-radius: 0.6rem;
-  padding: 0.55rem 0.7rem;
+  border: 1.5px solid #e2e8f0;
+  background: #fff;
+  border-radius: 0.55rem;
+  padding: 0.45rem 0.55rem;
   cursor: pointer;
-  font-size: 1.1rem;
-  display: inline-block;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s, background 0.15s;
 }
 
 .portal-menu-btn:hover {
-  opacity: 0.9;
+  border-color: #1f4b9c;
+  background: #f0f5ff;
+}
+
+.portal-burger-line {
+  display: block;
+  width: 18px;
+  height: 2px;
+  border-radius: 2px;
+  background: #374151;
+  transition: background 0.15s;
+}
+
+.portal-menu-btn:hover .portal-burger-line {
+  background: #1f4b9c;
 }
 
 /* ── Topbar logo ── */
@@ -182,7 +199,84 @@
 }
 
 /* ═══════════════════════════════════════════════════
-   AVATAR BUTTON WITH COMPLETION RING
+   NOTIFICATION BELL
+   ═══════════════════════════════════════════════════ */
+
+.portal-notif-wrap {
+  position: relative;
+}
+
+.portal-notif-btn {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1.5px solid #e2e8f0;
+  background: #fff;
+  color: #374151;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.portal-notif-btn:hover {
+  border-color: #1f4b9c;
+  color: #1f4b9c;
+  background: #f0f5ff;
+}
+
+.portal-notif-badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 17px;
+  height: 17px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+  border: 2px solid #fff;
+  line-height: 1;
+}
+
+.portal-notif-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  width: 280px;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.85rem;
+  background: #fff;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14);
+  z-index: 40;
+  overflow: hidden;
+  animation: dropdown-slide 0.2s ease;
+}
+
+.portal-notif-header {
+  padding: 0.75rem 1rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #0f172a;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.portal-notif-empty {
+  padding: 1.25rem 1rem;
+  font-size: 0.82rem;
+  color: #94a3b8;
+  text-align: center;
+}
+
+/* ═══════════════════════════════════════════════════
+   AVATAR BUTTON WITH COMPLETION RING + NAME
    ═══════════════════════════════════════════════════ */
 
 .portal-profile-wrap {
@@ -191,16 +285,19 @@
 
 .portal-avatar-btn {
   position: relative;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
   border: none;
   background: none;
-  padding: 0;
+  padding: 0.3rem 0.5rem;
   cursor: pointer;
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 0.55rem;
+  border-radius: 0.65rem;
+  transition: background 0.15s;
+}
+
+.portal-avatar-btn:hover {
+  background: #f1f5f9;
 }
 
 .portal-avatar-btn:focus-visible {
@@ -208,21 +305,32 @@
   outline-offset: 2px;
 }
 
-/* SVG ring sits absolutely on top */
+/* Wrapper for the circle + ring */
+.portal-avatar-circle {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* SVG ring sits absolutely on top of circle wrapper */
 .avatar-ring {
   position: absolute;
   inset: 0;
   pointer-events: none;
 }
 
-/* Initials circle inside the ring */
+/* Initials fallback */
 .portal-avatar-initials {
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   background: linear-gradient(135deg, #1f4b9c 0%, #3b6fd4 100%);
   color: #fff;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -234,20 +342,55 @@
 }
 
 .portal-avatar-img {
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   object-fit: cover;
   position: relative;
   z-index: 1;
 }
 
+/* Name + role block */
+.portal-avatar-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  min-width: 0;
+}
+
+.portal-avatar-name {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  text-transform: capitalize;
+  line-height: 1.2;
+}
+
+.portal-avatar-role {
+  font-size: 0.7rem;
+  color: #64748b;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.portal-avatar-chevron {
+  color: #94a3b8;
+  flex-shrink: 0;
+  transition: transform 0.2s;
+}
+
+.portal-avatar-btn[aria-expanded="true"] .portal-avatar-chevron {
+  transform: rotate(180deg);
+}
+
 /* ── Hover tooltip ── */
 .portal-avatar-tooltip {
   position: absolute;
   top: calc(100% + 8px);
-  right: 50%;
-  transform: translateX(50%);
+  left: 50%;
+  transform: translateX(-50%);
   white-space: nowrap;
   font-size: 0.78rem;
   font-weight: 500;
@@ -265,15 +408,15 @@
   content: '';
   position: absolute;
   bottom: 100%;
-  right: 50%;
-  transform: translateX(50%);
+  left: 50%;
+  transform: translateX(-50%);
   border: 5px solid transparent;
   border-bottom-color: #1e293b;
 }
 
 @keyframes tooltip-fade {
-  from { opacity: 0; transform: translateX(50%) translateY(4px); }
-  to   { opacity: 1; transform: translateX(50%) translateY(0); }
+  from { opacity: 0; transform: translateX(-50%) translateY(4px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
 /* ═══════════════════════════════════════════════════

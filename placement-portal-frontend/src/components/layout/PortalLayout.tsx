@@ -4,6 +4,7 @@ import { useAuth, type Role } from '../../context/AuthContext'
 import { getMyProfile, type StudentProfile } from '../../api/profile'
 import { resolveFileUrl } from '../../config'
 import { getRoleTheme } from '../../utils/roleConfig'
+import { Bell, ChevronDown } from 'lucide-react'
 import jimsLogo from '../../assets/jims-logo.png'
 import './PortalLayout.css'
 
@@ -123,13 +124,24 @@ const CompletionRing = ({ percent, size = 44 }: { percent: number; size?: number
   )
 }
 
+const roleBadgeLabel: Record<Role, string> = {
+  student: 'Student',
+  recruiter: 'Recruiter',
+  admin: 'Admin',
+  hod: 'HOD',
+  tpo: 'TPO',
+}
+
 const PortalLayout = () => {
   const { user, logout } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
+  const [notifOpen, setNotifOpen] = useState(false)
   const [hovered, setHovered] = useState(false)
   const [completion, setCompletion] = useState(0)
+  const notifCount = 0
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const notifRef = useRef<HTMLDivElement>(null)
 
   const navItems = useMemo(() => {
     if (!user) return []
@@ -145,18 +157,21 @@ const PortalLayout = () => {
     }
   }, [user])
 
-  /* ── Close dropdown on outside click ── */
+  /* ── Close dropdowns on outside click ── */
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setProfileOpen(false)
       }
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setNotifOpen(false)
+      }
     }
-    if (profileOpen) {
+    if (profileOpen || notifOpen) {
       document.addEventListener('mousedown', handler)
     }
     return () => document.removeEventListener('mousedown', handler)
-  }, [profileOpen])
+  }, [profileOpen, notifOpen])
 
   const profilePathByRole: Record<Role, string> = {
     student: '/student/profile',
@@ -234,8 +249,34 @@ const PortalLayout = () => {
       <div className="portal-main-wrap">
         <header className="portal-topbar">
           <img src={jimsLogo} alt="JIMS Rohini Sector-5" className="portal-topbar-logo" />
+
           <div className="portal-topbar-right">
-            {/* ── Avatar + Dropdown ── */}
+
+            {/* ── Notification bell ── */}
+            <div className="portal-notif-wrap" ref={notifRef}>
+              <button
+                type="button"
+                className="portal-notif-btn"
+                onClick={() => setNotifOpen((v) => !v)}
+                aria-label="Notifications"
+              >
+                <Bell size={20} />
+                {notifCount > 0 && (
+                  <span className="portal-notif-badge">{notifCount > 9 ? '9+' : notifCount}</span>
+                )}
+              </button>
+
+              {notifOpen && (
+                <div className="portal-notif-dropdown">
+                  <div className="portal-notif-header">
+                    <span>Notifications</span>
+                  </div>
+                  <div className="portal-notif-empty">No new notifications</div>
+                </div>
+              )}
+            </div>
+
+            {/* ── Avatar + name + Dropdown ── */}
             <div className="portal-profile-wrap" ref={dropdownRef}>
               <button
                 type="button"
@@ -245,23 +286,33 @@ const PortalLayout = () => {
                 onMouseLeave={() => setHovered(false)}
                 aria-label="Profile menu"
               >
-                <CompletionRing percent={completion} size={44} />
-                {user?.profileImage ? (
-                  <img
-                    key={user.profileImage} /* remount on change so a stale cached failure doesn't persist */
-                    src={resolveFileUrl(user.profileImage) || ''}
-                    alt={user.name}
-                    className="portal-avatar-img"
-                    onError={(e) => {
-                      // Hide broken image and let the initials fallback show instead
-                      e.currentTarget.style.display = 'none'
-                    }}
-                  />
-                ) : (
-                  <span className="portal-avatar-initials">{initials}</span>
+                {/* Avatar circle with ring */}
+                <div className="portal-avatar-circle">
+                  <CompletionRing percent={completion} size={38} />
+                  {user?.profileImage ? (
+                    <img
+                      key={user.profileImage}
+                      src={resolveFileUrl(user.profileImage) || ''}
+                      alt={user.name}
+                      className="portal-avatar-img"
+                      onError={(e) => { e.currentTarget.style.display = 'none' }}
+                    />
+                  ) : (
+                    <span className="portal-avatar-initials">{initials}</span>
+                  )}
+                </div>
+
+                {/* Name + role text */}
+                {user && (
+                  <div className="portal-avatar-info">
+                    <span className="portal-avatar-name">{user.name}</span>
+                    <span className="portal-avatar-role">{roleBadgeLabel[user.role]}</span>
+                  </div>
                 )}
 
-                {/* ── Hover tooltip ── */}
+                <ChevronDown size={14} className="portal-avatar-chevron" />
+
+                {/* Hover tooltip */}
                 {hovered && !profileOpen && (
                   <span className="portal-avatar-tooltip">
                     Profile Completion: {completion}%
@@ -269,20 +320,16 @@ const PortalLayout = () => {
                 )}
               </button>
 
-              {/* ── Dropdown menu ── */}
+              {/* Dropdown menu */}
               {profileOpen && user && (
                 <div className="portal-profile-dropdown">
-                  {/* user info header */}
                   <div className="portal-dropdown-header">
                     <span className="portal-dropdown-name">{user.name}</span>
                     <span className="portal-dropdown-email">{user.email}</span>
                     {user.role === 'student' && (
                       <div className="portal-dropdown-bar-wrap">
                         <div className="portal-dropdown-bar">
-                          <div
-                            className="portal-dropdown-bar-fill"
-                            style={{ width: `${completion}%` }}
-                          />
+                          <div className="portal-dropdown-bar-fill" style={{ width: `${completion}%` }} />
                         </div>
                         <span className="portal-dropdown-bar-label">{completion}% complete</span>
                       </div>
@@ -291,33 +338,18 @@ const PortalLayout = () => {
 
                   <div className="portal-dropdown-divider" />
 
-                  <Link
-                    to={profilePathByRole[user.role]}
-                    className="portal-dropdown-item"
-                    onClick={() => setProfileOpen(false)}
-                  >
+                  <Link to={profilePathByRole[user.role]} className="portal-dropdown-item" onClick={() => setProfileOpen(false)}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                     My Profile
                   </Link>
-                  <Link
-                    to={changePasswordPathByRole[user.role]}
-                    className="portal-dropdown-item"
-                    onClick={() => setProfileOpen(false)}
-                  >
+                  <Link to={changePasswordPathByRole[user.role]} className="portal-dropdown-item" onClick={() => setProfileOpen(false)}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                     Change Password
                   </Link>
 
                   <div className="portal-dropdown-divider" />
 
-                  <button
-                    type="button"
-                    className="portal-dropdown-item portal-dropdown-logout"
-                    onClick={() => {
-                      setProfileOpen(false)
-                      logout()
-                    }}
-                  >
+                  <button type="button" className="portal-dropdown-item portal-dropdown-logout" onClick={() => { setProfileOpen(false); logout() }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                     Log Out
                   </button>
@@ -325,13 +357,18 @@ const PortalLayout = () => {
               )}
             </div>
 
+            {/* ── Hamburger ── */}
             <button
               type="button"
               className="portal-menu-btn"
               onClick={() => setSidebarOpen((v) => !v)}
+              aria-label="Open menu"
             >
-              ☰
+              <span className="portal-burger-line" />
+              <span className="portal-burger-line" />
+              <span className="portal-burger-line" />
             </button>
+
           </div>
         </header>
 
