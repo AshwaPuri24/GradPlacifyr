@@ -38,7 +38,7 @@ const INDUSTRIES = [
 ]
 
 const RecruiterProfile = () => {
-  const { user: authUser, updateProfileImage } = useAuth()
+  useAuth()
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -166,7 +166,6 @@ const RecruiterProfile = () => {
   }
 
   const logoSrc = profileData.logoUrl ? resolveFileUrl(profileData.logoUrl) : null
-  const avatarSrc = userData?.profileImage ? resolveFileUrl(userData.profileImage) : null
 
   if (loading) {
     return (

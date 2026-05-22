@@ -21,7 +21,7 @@ import {
 import '../shared/WorkPages.css'
 
 const AdminProfile = () => {
-  const { user: authUser, updateProfileImage } = useAuth()
+  const { updateProfileImage } = useAuth()
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)

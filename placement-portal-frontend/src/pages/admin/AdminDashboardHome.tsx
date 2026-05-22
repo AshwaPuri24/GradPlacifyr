@@ -1,29 +1,32 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import {
-  GraduationCap,
-  Building2,
-  Briefcase,
-  ChartNoAxesColumn,
   Users,
-  ClipboardCheck,
   FileBarChart,
-  Handshake,
-  Eye,
+  ChevronRight,
+  TrendingUp,
+  Calendar as CalendarIcon,
+  CheckCircle,
+  AlertCircle,
+  Briefcase,
+  Mail,
+  Building2,
+  FileCheck,
+  Activity,
+  BarChart3,
+  Shield,
+  ChevronDown,
 } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { getJobs, type Job } from '../../api/jobs'
 import { getApplications, type PortalApplication } from '../../api/applications'
 import { getUsers, type PortalUser } from '../../api/users'
 import { getRoleTheme } from '../../utils/roleConfig'
 import {
   ActivityTimeline,
-  ChartCard,
   DashboardLayout,
   EventCalendar,
-  MetricCard,
-  QuickActionCard,
-  SuggestionPanel,
-  type SuggestionItem,
+  WorkflowCard,
   type TimelineItem,
 } from '../../components/dashboard'
 
@@ -31,12 +34,11 @@ const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Se
 
 const AdminDashboardHome = () => {
   const { user } = useAuth()
-  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [jobs, setJobs] = useState<Job[]>([])
   const [applications, setApplications] = useState<PortalApplication[]>([])
   const [students, setStudents] = useState<PortalUser[]>([])
-  const [companies, setCompanies] = useState<PortalUser[]>([])
+  const [_companies, setCompanies] = useState<PortalUser[]>([])
 
   useEffect(() => {
     Promise.all([getJobs(), getApplications(), getUsers('student'), getUsers('recruiter')])
@@ -50,7 +52,6 @@ const AdminDashboardHome = () => {
         const message = err instanceof Error ? err.message : 'Failed to load dashboard data'
         setError(message)
       })
-      .finally(() => setLoading(false))
   }, [])
 
   // ── Derived metrics ──
@@ -85,14 +86,6 @@ const AdminDashboardHome = () => {
     ]
   }, [applications, selectedCount])
 
-  const statusBreakdownData = useMemo(() => {
-    const base = new Map<string, number>()
-    for (const app of applications) {
-      base.set(app.status, (base.get(app.status) || 0) + 1)
-    }
-    return Array.from(base.entries()).map(([name, value]) => ({ name, value }))
-  }, [applications])
-
   const trendData = useMemo(() => {
     const monthMap = new Map<string, number>()
     for (const app of applications) {
@@ -110,17 +103,6 @@ const AdminDashboardHome = () => {
     { branch: 'BCA', students: Math.round(students.length * 0.18), placed: Math.round(students.length * 0.18 * 0.42) },
   ], [students.length])
 
-  const companyDistribution = useMemo(() => {
-    const byCompany = new Map<string, number>()
-    for (const app of applications) {
-      byCompany.set(app.company, (byCompany.get(app.company) || 0) + 1)
-    }
-    return Array.from(byCompany.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 6)
-      .map(([company, count]) => ({ company, count }))
-  }, [applications])
-
   // ── Activity timeline ──
 
   const activityItems = useMemo<TimelineItem[]>(
@@ -137,190 +119,465 @@ const AdminDashboardHome = () => {
 
   // ── Smart suggestions ──
 
-  const suggestionItems = useMemo<SuggestionItem[]>(
-    () => [
-      {
-        id: 'placement-health',
-        title: 'Improve placement conversion',
-        detail: `Current placement percentage is ${placementPercentage}%. Focus support on low-conversion cohorts.`,
-      },
-      {
-        id: 'company-growth',
-        title: 'Expand active company base',
-        detail: `${companies.length} companies are active. Invite niche employers for better role diversity.`,
-      },
-      {
-        id: 'drives',
-        title: 'Prioritize high-volume drives',
-        detail: `There are ${activeJobs} active jobs. Review SLA adherence for each company.`,
-      },
-      {
-        id: 'interview',
-        title: 'Balance interview load',
-        detail: `${interviewsScheduled} interview/test rounds are in progress. Coordinate scheduling early.`,
-      },
-      {
-        id: 'student-enablement',
-        title: 'Launch readiness workshops',
-        detail: `Support ${students.length} students with focused interview and aptitude prep sessions.`,
-      },
-    ],
-    [placementPercentage, companies.length, activeJobs, interviewsScheduled, students.length]
+  const pendingApprovals = useMemo(
+    () => applications.filter((a) => a.status === 'applied').length,
+    [applications]
   )
+
+  const shortlistedCount = useMemo(
+    () => applications.filter((a) => a.status === 'shortlisted').length,
+    [applications]
+  )
+
+  const offersCount = useMemo(
+    () => applications.filter((a) => a.status === 'selected').length,
+    [applications]
+  )
+
+  // ── Filter state ──
+  const [filterMode, setFilterMode] = useState<'month' | 'company'>('month')
+  const [selectedCompany, setSelectedCompany] = useState<string | null>(null)
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+
+  // ── Company list from jobs ──
+  const companyList = useMemo(() => {
+    const companySet = new Set(jobs.map((j) => j.company))
+    return Array.from(companySet).sort()
+  }, [jobs])
+
+  // ── Company-filtered metrics ──
+  const companyMetrics = useMemo(() => {
+    if (!selectedCompany) return null
+
+    const companyJobs = jobs.filter((j) => j.company === selectedCompany)
+    const companyJobIds = new Set(companyJobs.map((j) => j.id))
+    const companyApplications = applications.filter((a) => companyJobIds.has(a.jobId))
+
+    const companySelected = companyApplications.filter((a) => a.status === 'selected').length
+    const companyShortlisted = companyApplications.filter((a) => a.status === 'shortlisted').length
+    const companyActiveJobs = companyJobs.filter((j) => j.status === 'open').length
+
+    const companyPlacementPercentage = companyApplications.length
+      ? Math.round((companySelected / companyApplications.length) * 100)
+      : 0
+
+    return {
+      activeCompanies: 1,
+      activeJobs: companyActiveJobs,
+      applications: companyApplications.length,
+      shortlisted: companyShortlisted,
+      offers: companySelected,
+      conversionRate: companyPlacementPercentage,
+    }
+  }, [selectedCompany, jobs, applications])
 
   // ── Render ──
 
   const roleTheme = getRoleTheme(user?.role ?? 'admin')
 
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = () => setIsDropdownOpen(false)
+    if (isDropdownOpen) {
+      document.addEventListener('click', handleClickOutside)
+    }
+    return () => document.removeEventListener('click', handleClickOutside)
+  }, [isDropdownOpen])
+
   return (
     <DashboardLayout
-      greeting={`Welcome back, ${user?.name ?? 'Admin'}`}
+      user={user ?? undefined}
       title="Admin Dashboard"
-      subtitle="Unified view of platform performance, drive operations, user growth, and placement outcomes."
+      subtitle="Here is an overview of your placement operations today."
       compactLayout
       heroGradient={roleTheme.heroGradient}
       roleIcon={roleTheme.icon}
       error={error}
-      readinessLabel={`System Health: Active`}
-      readinessPercent={placementPercentage}
+      readinessLabel="System Health: Active"
       heroStats={[
-        { label: 'Students', value: students.length },
-        { label: 'Companies', value: companies.length },
-        { label: 'Placement %', value: `${placementPercentage}%` },
+        { label: 'Active Drives', value: activeJobs },
+        { label: 'Pending Approvals', value: pendingApprovals },
+        { label: "Today's Interviews", value: interviewsScheduled },
+        { label: 'Students Placed', value: selectedCount },
+        { label: 'Placement Rate', value: `${placementPercentage}%` },
       ]}
-      primaryContentTitle="Platform Analytics"
-      primaryContentSubtitle="Placement pipeline, application trends, and branch-wise distribution"
-      primaryContent={
-        <div className="chart-grid">
-          <ChartCard
-            title="Placement Status Overview"
-            subtitle="Selection pipeline distribution"
-            config={{
-              kind: 'donut',
-              data: placementStatsData.length ? placementStatsData : [{ name: 'No Data', value: 1 }],
-            }}
-            loading={loading}
-          />
-          <ChartCard
-            title="Applications by Status"
-            subtitle="Round-wise funnel view"
-            config={{
-              kind: 'donut',
-              data: statusBreakdownData.length ? statusBreakdownData : [{ name: 'No Data', value: 1 }],
-            }}
-            loading={loading}
-          />
-          <ChartCard
-            title="Applications Trend"
-            subtitle="Month-over-month pipeline flow"
-            config={{
-              kind: 'line',
-              data: trendData,
-              xKey: 'month',
-              series: [{ key: 'applications', label: 'Applications', color: '#7c3aed' }],
-            }}
-            loading={loading}
-          />
-          <ChartCard
-            title="Branch-wise Placement"
-            subtitle="Split across academic cohorts"
-            config={{
-              kind: 'bar',
-              data: branchDistribution,
-              xKey: 'branch',
-              series: [
-                { key: 'students', label: 'Students', color: '#5b21b6' },
-                { key: 'placed', label: 'Placed', color: '#daa824' },
-              ],
-            }}
-            loading={loading}
-          />
-          <ChartCard
-            title="Company-wise Distribution"
-            subtitle="Applications by active companies"
-            config={{
-              kind: 'bar',
-              data: companyDistribution,
-              xKey: 'company',
-              series: [{ key: 'count', label: 'Applications', color: '#daa824' }],
-            }}
-            loading={loading}
-          />
-        </div>
-      }
-      kpis={
-        <>
-          <MetricCard icon={GraduationCap} label="Total Students" value={students.length} trend={5} loading={loading} />
-          <MetricCard icon={Building2} label="Active Companies" value={activeCompanies} trend={4} loading={loading} />
-          <MetricCard icon={Briefcase} label="Active Jobs" value={activeJobs} trend={6} loading={loading} />
-          <MetricCard
-            icon={ChartNoAxesColumn}
-            label="Placement %"
-            value={`${placementPercentage}%`}
-            trend={3}
-            loading={loading}
-          />
-          <MetricCard icon={Users} label="Applications" value={applications.length} trend={8} loading={loading} />
-        </>
-      }
-      calendar={<EventCalendar canManage />}
-      analyticsTitle="Detailed Metrics"
-      analyticsSubtitle="Interviews, selection ratios, and scheduling"
-      analytics={
-        <div className="chart-grid">
-          <ChartCard
-            title="Interview Pipeline"
-            subtitle="Scheduled vs selected"
-            config={{
-              kind: 'donut',
-              data: [
-                { name: 'Interviews', value: interviewsScheduled },
-                { name: 'Selected', value: selectedCount },
-                { name: 'Other', value: Math.max(applications.length - interviewsScheduled - selectedCount, 0) },
-              ],
-            }}
-            loading={loading}
-          />
-        </div>
-      }
-      activityTitle="Platform Activity"
-      activitySubtitle="Recent actions across all users"
-      activity={<ActivityTimeline items={activityItems} emptyText="No recent platform activity yet." />}
+      kpis={null}
+      skipQuickActionsCard
       quickActions={
-        <div className="quick-action-grid">
-          <QuickActionCard
+        <div className="workflow-cards-grid workflow-cards-6">
+          <WorkflowCard
+            to="/admin/manage-tpo"
+            title="Manage TPO"
+            subtitle="Manage TPO accounts and permissions"
+            icon={Shield}
+            color="blue"
+          />
+          <WorkflowCard
             to="/admin/manage-students"
             title="Manage Students"
-            description="Review and maintain student accounts"
+            subtitle="View and maintain student records"
             icon={Users}
+            color="indigo"
           />
-          <QuickActionCard
+          <WorkflowCard
             to="/admin/manage-companies"
             title="Manage Companies"
-            description="Control recruiter access and health"
-            icon={Handshake}
+            subtitle="Manage recruiter and company details"
+            icon={Building2}
+            color="teal"
           />
-          <QuickActionCard
+          <WorkflowCard
             to="/admin/approve-jobs"
             title="Approve JNF / TNF"
-            description="Validate and control job postings"
-            icon={ClipboardCheck}
+            subtitle="Validate and approve job postings"
+            icon={FileCheck}
+            color="amber"
           />
-          <QuickActionCard
+          <WorkflowCard
             to="/admin/monitor-applications"
             title="Monitor Applications"
-            description="Watch movement across rounds"
-            icon={Eye}
+            subtitle="Track student applications"
+            icon={Activity}
+            color="purple"
           />
-          <QuickActionCard
+          <WorkflowCard
             to="/admin/reports"
             title="Placement Reports"
-            description="Open analytics and exports"
-            icon={FileBarChart}
+            subtitle="View analytics and reports"
+            icon={BarChart3}
+            color="cyan"
           />
         </div>
       }
-      insights={<SuggestionPanel title="AI Insights" items={suggestionItems} />}
+      skipActivityCard
+      activity={
+        <div className="admin-ops-grid">
+          {/* LEFT — Recent Activity */}
+          <div className="admin-activity-card">
+            <div className="admin-section-head">
+              <div className="admin-section-title">
+                <div className="admin-section-icon">
+                  <Activity size={16} />
+                </div>
+                <div>
+                  <h2>Recent Activity</h2>
+                  <p>Latest platform updates and student movement</p>
+                </div>
+              </div>
+              <Link to="/admin/monitor-applications" className="admin-view-all">
+                View All <ChevronRight size={14} />
+              </Link>
+            </div>
+            <div className="admin-activity-scroll">
+              <ActivityTimeline items={activityItems} emptyText="No recent platform activity yet." />
+            </div>
+          </div>
+          {/* RIGHT — Calendar */}
+          <div className="admin-calendar-section">
+            <EventCalendar canManage />
+          </div>
+        </div>
+      }
+      primaryContent={
+        <>
+          {/* Overview Section — moved directly below Activity + Calendar */}
+          <section className="dashboard-section dashboard-section-overview">
+            <div className="dashboard-section-head">
+              <div>
+                <h2>Overview — {filterMode === 'month' ? 'This Month' : selectedCompany || 'All Companies'}</h2>
+                <p>Key placement metrics</p>
+              </div>
+              <div className="overview-filters">
+                <button
+                  className={`overview-filter-btn ${filterMode === 'month' ? 'active' : ''}`}
+                  onClick={() => setFilterMode('month')}
+                >
+                  Month Wise
+                </button>
+                <div className="company-dropdown-wrapper" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    className={`overview-filter-btn company-btn ${filterMode === 'company' ? 'active' : ''}`}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setFilterMode('company')
+                      setIsDropdownOpen(!isDropdownOpen)
+                    }}
+                    aria-expanded={isDropdownOpen}
+                  >
+                    Company Wise
+                    <ChevronDown size={14} className={`company-dropdown-arrow ${isDropdownOpen ? 'open' : ''}`} />
+                  </button>
+                  {isDropdownOpen && filterMode === 'company' && (
+                    <div className="company-dropdown-menu">
+                      <div className="company-dropdown-list">
+                        {companyList.map((company) => (
+                          <button
+                            key={company}
+                            className={`company-dropdown-item ${selectedCompany === company ? 'selected' : ''}`}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedCompany(company)
+                              setIsDropdownOpen(false)
+                            }}
+                            aria-selected={selectedCompany === company}
+                          >
+                            {company}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="overview-strip">
+              <div className="overview-stat">
+                <div className="overview-icon overview-icon-blue">
+                  <Briefcase size={18} />
+                </div>
+                <div className="overview-content">
+                  <span className="overview-label">
+                    {filterMode === 'company' && selectedCompany ? selectedCompany : 'Active Companies'}
+                  </span>
+                  <strong className="overview-value">
+                    {filterMode === 'company' && companyMetrics ? companyMetrics.activeCompanies : activeCompanies}
+                  </strong>
+                </div>
+              </div>
+              <div className="overview-stat">
+                <div className="overview-icon overview-icon-indigo">
+                  <FileBarChart size={18} />
+                </div>
+                <div className="overview-content">
+                  <span className="overview-label">
+                    {filterMode === 'company' && selectedCompany ? 'Open Roles' : 'New Opportunities'}
+                  </span>
+                  <strong className="overview-value">
+                    {filterMode === 'company' && companyMetrics ? companyMetrics.activeJobs : activeJobs}
+                  </strong>
+                </div>
+              </div>
+              <div className="overview-stat">
+                <div className="overview-icon overview-icon-purple">
+                  <Mail size={18} />
+                </div>
+                <div className="overview-content">
+                  <span className="overview-label">Applications</span>
+                  <strong className="overview-value">
+                    {filterMode === 'company' && companyMetrics ? companyMetrics.applications : applications.length}
+                  </strong>
+                </div>
+              </div>
+              <div className="overview-stat">
+                <div className="overview-icon overview-icon-amber">
+                  <CheckCircle size={18} />
+                </div>
+                <div className="overview-content">
+                  <span className="overview-label">Shortlisted</span>
+                  <strong className="overview-value">
+                    {filterMode === 'company' && companyMetrics ? companyMetrics.shortlisted : shortlistedCount}
+                  </strong>
+                </div>
+              </div>
+              <div className="overview-stat">
+                <div className="overview-icon overview-icon-green">
+                  <CheckCircle size={18} />
+                </div>
+                <div className="overview-content">
+                  <span className="overview-label">Offers</span>
+                  <strong className="overview-value">
+                    {filterMode === 'company' && companyMetrics ? companyMetrics.offers : offersCount}
+                  </strong>
+                </div>
+              </div>
+              <div className="overview-stat">
+                <div className="overview-icon overview-icon-teal">
+                  <TrendingUp size={18} />
+                </div>
+                <div className="overview-content">
+                  <span className="overview-label">Conversion Rate</span>
+                  <strong className="overview-value">
+                    {filterMode === 'company' && companyMetrics ? `${companyMetrics.conversionRate}%` : `${placementPercentage}%`}
+                  </strong>
+                </div>
+              </div>
+            </div>
+          </section>
+          {/* Pending Actions + Quick Analytics — 50/50 Horizontal Grid */}
+          <div className="admin-pending-analytics-grid">
+            {/* LEFT: Pending Actions */}
+            <section className="dashboard-section dashboard-section-pending">
+              <div className="dashboard-section-head">
+                <div>
+                  <h2>Pending Actions</h2>
+                  <p>Items requiring your immediate attention</p>
+                </div>
+                <Link to="/admin/approve-jobs" className="section-view-all">
+                  View All <ChevronRight size={14} />
+                </Link>
+              </div>
+              <div className="pending-actions-list">
+                <Link to="/admin/approve-jobs" className="pending-action-item">
+                  <div className="pending-icon-container pending-icon-amber">
+                    <AlertCircle size={20} />
+                  </div>
+                  <div className="pending-content">
+                    <span className="pending-title">JNF Approvals Pending</span>
+                    <span className="pending-desc">Review and approve job postings</span>
+                  </div>
+                  <div className="pending-badge">{pendingApprovals}</div>
+                  <ChevronRight size={18} className="pending-arrow" />
+                </Link>
+                <Link to="/admin/monitor-applications" className="pending-action-item">
+                  <div className="pending-icon-container pending-icon-blue">
+                    <CalendarIcon size={20} />
+                  </div>
+                  <div className="pending-content">
+                    <span className="pending-title">Interviews to Schedule</span>
+                    <span className="pending-desc">Coordinate upcoming interviews</span>
+                  </div>
+                  <div className="pending-badge">{interviewsScheduled}</div>
+                  <ChevronRight size={18} className="pending-arrow" />
+                </Link>
+                <Link to="/admin/manage-students" className="pending-action-item">
+                  <div className="pending-icon-container pending-icon-purple">
+                    <Users size={20} />
+                  </div>
+                  <div className="pending-content">
+                    <span className="pending-title">Student Verifications</span>
+                    <span className="pending-desc">Pending student document reviews</span>
+                  </div>
+                  <div className="pending-badge">3</div>
+                  <ChevronRight size={18} className="pending-arrow" />
+                </Link>
+                <Link to="/admin/manage-companies" className="pending-action-item">
+                  <div className="pending-icon-container pending-icon-green">
+                    <Building2 size={20} />
+                  </div>
+                  <div className="pending-content">
+                    <span className="pending-title">Recruiter Approvals</span>
+                    <span className="pending-desc">Pending company account reviews</span>
+                  </div>
+                  <div className="pending-badge">2</div>
+                  <ChevronRight size={18} className="pending-arrow" />
+                </Link>
+              </div>
+            </section>
+
+            {/* RIGHT: Quick Analytics */}
+            <section className="dashboard-section dashboard-section-analytics">
+              <div className="dashboard-section-head">
+                <div>
+                  <h2>Quick Analytics</h2>
+                  <p>Placement funnel and performance trends</p>
+                </div>
+              </div>
+              <div className="quick-analytics-grid">
+                {/* Placement Funnel - Horizontal Progress Bars */}
+                <div className="analytics-card">
+                  <div className="analytics-card-header">
+                    <h3 className="analytics-card-title">Placement Funnel</h3>
+                    <p className="analytics-card-subtitle">Application pipeline status</p>
+                  </div>
+                  <div className="funnel-chart">
+                    {placementStatsData.map((item) => {
+                      const total = placementStatsData.reduce((sum, d) => sum + d.value, 0) || 1
+                      const percentage = Math.round((item.value / total) * 100)
+                      return (
+                        <div key={item.name} className="funnel-row">
+                          <span className="funnel-label">{item.name}</span>
+                          <div className="funnel-bar-track">
+                            <div
+                              className="funnel-bar-fill"
+                              style={{
+                                width: `${percentage}%`,
+                                background:
+                                  item.name === 'Selected'
+                                    ? 'linear-gradient(90deg, #22c55e, #4ade80)'
+                                    : item.name === 'In Progress'
+                                      ? 'linear-gradient(90deg, #f59e0b, #fbbf24)'
+                                      : 'linear-gradient(90deg, #ef4444, #f87171)',
+                              }}
+                            />
+                          </div>
+                          <span className="funnel-value">{item.value}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Branch Placement - Vertical Bar Graph */}
+                <div className="analytics-card">
+                  <div className="analytics-card-header">
+                    <h3 className="analytics-card-title">Branch Placement</h3>
+                    <p className="analytics-card-subtitle">Students placed by branch</p>
+                  </div>
+                  <div className="branch-chart">
+                    {branchDistribution.map((branch) => {
+                      const maxStudents = Math.max(...branchDistribution.map((b) => b.students)) || 1
+                      const studentHeight = Math.max((branch.students / maxStudents) * 100, 8)
+                      const placedHeight = branch.students > 0 ? (branch.placed / branch.students) * studentHeight : 0
+                      return (
+                        <div key={branch.branch} className="branch-bar-group">
+                          <div className="branch-bars">
+                            <div
+                              className="branch-bar branch-bar-students"
+                              style={{ height: `${studentHeight}%` }}
+                              title={`Students: ${branch.students}`}
+                            />
+                            <div
+                              className="branch-bar branch-bar-placed"
+                              style={{ height: `${placedHeight}%` }}
+                              title={`Placed: ${branch.placed}`}
+                            />
+                          </div>
+                          <span className="branch-label">{branch.branch}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Applications Trend - Monthly Bars */}
+                <div className="analytics-card">
+                  <div className="analytics-card-header">
+                    <h3 className="analytics-card-title">Applications Trend</h3>
+                    <p className="analytics-card-subtitle">Monthly application flow</p>
+                  </div>
+                  <div className="trend-chart">
+                    {trendData.length > 0 ? (
+                      trendData.slice(-6).map((item) => {
+                        const maxApps = Math.max(...trendData.map((d) => d.applications)) || 1
+                        const barHeight = Math.max((item.applications / maxApps) * 100, 8)
+                        return (
+                          <div key={item.month} className="trend-bar-group">
+                            <div
+                              className="trend-bar"
+                              style={{ height: `${barHeight}%` }}
+                              title={`${item.applications} applications`}
+                            />
+                            <span className="trend-month">{item.month}</span>
+                          </div>
+                        )
+                      })
+                    ) : (
+                      <div className="trend-bar-group">
+                        <div className="trend-bar" style={{ height: '8%' }} />
+                        <span className="trend-month">No Data</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </>
+      }
+      skipPrimaryCard
+      skipAnalyticsCard
+      analytics={null}
+      insights={null}
     />
   )
 }

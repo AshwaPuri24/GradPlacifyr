@@ -142,7 +142,7 @@ const CompanyRoundsPage = () => {
 
   const handleSeedRound = async (roundId: number) => {
     try {
-      const res = await seedRound(roundId)
+      await seedRound(roundId)
       loadCandidates(roundId)
       loadRounds()
     } catch (err: unknown) {

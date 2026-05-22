@@ -8,16 +8,13 @@ import {
   Target,
   ShieldCheck,
   Award,
-  GraduationCap,
   Users,
   BookOpen,
   Phone,
   Mail,
   MapPin,
   Globe,
-  Star,
   TrendingUp,
-  CheckCircle2,
 } from 'lucide-react'
 import LandingHeader from '../../components/landing/LandingHeader'
 import LandingFooter from '../../components/landing/LandingFooter'
