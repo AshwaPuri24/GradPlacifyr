@@ -86,7 +86,7 @@ router.post(
       const userContext = userContextParts.join('\n\n')
 
       const completion = await openai.chat.completions.create({
-        model: 'gpt-4.1-mini',
+        model: 'qwen2.5-mcq',
         response_format: { type: 'json_object' },
         messages: [
           {
@@ -175,7 +175,7 @@ router.post(
       if (!safeSkills) throw new AppError('Skills are required', 400, 'VALIDATION_ERROR')
 
       const completion = await openai.chat.completions.create({
-        model: 'gpt-4.1-mini',
+        model: 'qwen2.5-mcq',
         response_format: { type: 'json_object' },
         messages: [
           {

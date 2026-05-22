@@ -217,7 +217,7 @@ router.post(
       const sanitizedText = extractedText.slice(0, MAX_RESUME_CHARS)
 
       const completion = await openai.chat.completions.create({
-        model: 'gpt-4.1-mini',
+        model: 'qwen2.5-mcq',
         response_format: { type: 'json_object' },
         messages: [
           {
